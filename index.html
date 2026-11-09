@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Play the Game · Marathon</title>
+<meta name="theme-color" content="#0a0f1e">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231B4B8A'/%3E%3Cpath d='M12 9l11 7-11 7z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=DM+Mono:wght@400;500&display=swap">
+</head>
+<body>
+<header class="hero">
+  <div class="hero-in">
+    <div>
+      <div class="eyebrow" id="eyebrow">Talento, Clima y Cultura</div>
+      <h1>Play the Game</h1>
+      <div class="season" id="season"><b>Conectando…</b></div>
+    </div>
+    <div class="row" style="gap:12px">
+      <span class="pill" id="status"><i></i><span>Reservas abiertas</span></span>
+      <button class="pill pais-chip" id="pais-chip" hidden></button><span class="pill role" id="role" hidden></span>
+      <span class="who-me" id="me"></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap" id="auth" hidden></div>
+
+<div class="wrap" id="app" hidden>
+  <nav class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-tab="reservar" aria-selected="true">Elegir turno</button>
+    <button role="tab" data-tab="mios" aria-selected="false">Mis turnos<span class="n" id="n-mios">0</span></button>
+    <button role="tab" data-tab="admin" aria-selected="false" hidden id="tab-admin">Panel RRHH</button>
+  </nav>
+
+  <!-- ===== ELEGIR ===== -->
+  <div id="v-reservar">
+    <div id="pais-gate" class="gate" hidden></div>
+    <div class="u-grid" id="u-main">
+      <div style="min-width:0">
+        <div id="booked" hidden></div>
+        <div class="cal-h">
+          <h2 id="cal-title">Calendario</h2>
+          <div class="row" style="gap:10px">
+            <div class="filters">
+              <select id="f-ciudad" aria-label="Ciudad"><option value="">Todas las ciudades</option></select>
+            </div>
+            <div class="cal-nav"><button id="prev" aria-label="Mes anterior">‹</button><button id="next" aria-label="Mes siguiente">›</button></div>
+          </div>
+        </div>
+        <div id="cal"></div>
+        <div id="day"></div>
+      </div>
+      <aside class="u-side">
+        <div class="card">
+          <h3>Tus datos</h3>
+          <div style="display:grid;gap:12px">
+            <div class="field"><label for="nombre">Nombre y apellido</label><input type="text" id="nombre" autocomplete="name" placeholder="Como te conocen en la tienda"></div>
+            <div class="field"><label for="area">Área</label><input type="text" id="area" placeholder="Ej. Finanzas, Compras, TI"></div>
+            <div class="field"><span class="lbl">Correo</span><span class="mono" id="mi-correo" style="font-size:13px;word-break:break-all"></span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Cómo funciona</h3>
+          <div class="steps" id="steps"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ===== MIS TURNOS ===== -->
+  <div id="v-mios" hidden><div class="mis" id="mios"></div></div>
+
+  <!-- ===== RRHH ===== -->
+  <div id="v-admin" hidden>
+    <div id="a-gate" class="gate" hidden></div>
+    <div class="a-grid" id="a-main">
+      <nav class="a-nav" id="anav">
+        <div class="a-scope" id="a-scope"></div>
+        <button data-sub="resumen" aria-selected="true">Resumen</button>
+        <button data-sub="tiendas" aria-selected="false">Tiendas<span class="c" id="c-tiendas"></span></button>
+        <button data-sub="turnos" aria-selected="false">Turnos<span class="c" id="c-turnos"></span></button>
+        <button data-sub="personal" aria-selected="false">Personal convocado<span class="c" id="c-personal"></span></button>
+        <button data-sub="asistencia" aria-selected="false">Asistencia</button>
+        <button data-sub="correos" aria-selected="false">Correos a tiendas<span class="c" id="c-avisos"></span></button>
+        <button data-sub="temporada" aria-selected="false">Temporada</button>
+        <button data-sub="acceso" aria-selected="false" id="nav-acceso" hidden>Acceso y PIN</button>
+      </nav>
+
+      <div>
+        <!-- Resumen -->
+        <div class="pane" data-pane="resumen">
+          <div class="pane-h"><h2>Resumen</h2><p>Cobertura de los turnos que vienen. Los tonos más intensos indican tiendas con más cupos llenos.</p></div>
+          <div id="avisos-banner"></div>
+          <div class="kpis" id="kpis"></div>
+          <div class="card">
+            <div class="card-h"><h3 style="margin:0">Cobertura por tienda y día</h3><span class="hint">Próximos 21 días</span></div>
+            <div class="scroll" id="heat"></div>
+            <div class="legend"><span><i style="--a:12%"></i>Nadie inscrito</span><span><i style="--a:50%"></i>Parcial</span><span><i style="--a:100%"></i>Completo</span><span><i style="--a:0%;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></i>Sin turno</span></div>
+          </div>
+          <div>
+            <div class="card"><div class="card-h"><h3 style="margin:0">Turnos en riesgo</h3><span class="hint">Próximos 7 días con cupos libres</span></div><div class="risk" id="risk"></div></div>
+          </div>
+          <div class="row"><button class="btn ghost" id="csv">Descargar reservas (CSV)</button></div>
+        </div>
+
+        <!-- Tiendas -->
+        <div class="pane" data-pane="tiendas" hidden>
+          <div class="pane-h"><h2>Tiendas</h2><p>Las tiendas que reciben apoyo. Su correo se usa para la invitación de calendario y para el aviso de quiénes van.</p></div>
+          <div class="card">
+            <h3>Agregar tienda</h3>
+            <form id="f-tienda" class="grid">
+              <div class="field"><label for="ti-nombre">Tienda</label><input type="text" id="ti-nombre" required placeholder="Marathon Quicentro"></div>
+              <div class="field"><label for="ti-ciudad">Ciudad</label><input type="text" id="ti-ciudad" required placeholder="Quito"></div>
+              <div class="field" id="ti-pais-f"><label for="ti-pais">Empresa y país</label><select id="ti-pais"></select></div>
+              <div class="field"><label for="ti-email">Correo de la tienda</label><input type="email" id="ti-email" placeholder="quicentro@marathon.com"></div>
+              <div class="span"><button class="btn" type="submit">Agregar tienda</button></div>
+            </form>
+          </div>
+          <div class="card">
+            <h3>Pegar varias desde Excel</h3>
+            <p class="hint" style="margin:-4px 0 10px">Una por línea, en este orden: <span class="mono">Tienda; Ciudad; Empresa (Marathon o Equinox; en vista regional agrega el país, ej. Equinox PE); Correo</span></p>
+            <textarea id="bulk" placeholder="Marathon Quicentro; Quito; Marathon; quicentro@marathon.com"></textarea>
+            <div class="row" style="margin-top:10px"><button class="btn" id="bulk-go">Importar tiendas</button></div>
+          </div>
+          <div id="tiendas-list"></div>
+        </div>
+
+        <!-- Turnos -->
+        <div class="pane" data-pane="turnos" hidden>
+          <div class="pane-h"><h2>Turnos</h2><p>Crea bloques de turnos para una tienda, una ciudad o todas, en un rango de fechas.</p></div>
+          <div class="card">
+            <h3>Crear turnos</h3>
+            <form id="f-turno" class="grid">
+              <div class="field span"><label for="tu-tienda">Dónde</label><select id="tu-tienda"></select></div>
+              <div class="field"><label for="tu-desde">Desde</label><input type="date" id="tu-desde" required></div>
+              <div class="field"><label for="tu-hasta">Hasta</label><input type="date" id="tu-hasta" required></div>
+              <div class="field"><label for="tu-ini">Entrada</label><input type="time" id="tu-ini" value="17:00" required></div>
+              <div class="field"><label for="tu-fin">Salida</label><input type="time" id="tu-fin" value="19:00" required></div>
+              <div class="field"><label for="tu-cupos">Personas por turno</label><input type="number" id="tu-cupos" min="1" max="20" value="2" required></div>
+              <div class="field span"><span class="lbl">Días</span>
+                <div class="dias" id="tu-dias">
+                  <label><input type="checkbox" value="1" checked>Lun</label><label><input type="checkbox" value="2" checked>Mar</label><label><input type="checkbox" value="3" checked>Mié</label><label><input type="checkbox" value="4" checked>Jue</label><label><input type="checkbox" value="5" checked>Vie</label><label><input type="checkbox" value="6" checked>Sáb</label><label><input type="checkbox" value="0" checked>Dom</label>
+                </div>
+              </div>
+              <label class="chk span"><input type="checkbox" id="tu-prio"> Marcar como alta demanda (aparece primero y destacado para el colaborador)</label>
+              <div class="row span"><button class="btn" type="submit" id="tu-go">Crear turnos</button><span class="hint" id="tu-prev"></span></div>
+            </form>
+          </div>
+          <div id="turnos-list"></div>
+        </div>
+
+        <!-- Personal -->
+        <div class="pane" data-pane="personal" hidden>
+          <div class="pane-h"><h2>Personal convocado</h2><p>Carga la lista de personal administrativo que debe apoyar. La app cruza los correos con las reservas y te dice quién falta. Solo RRHH ve esta lista.</p></div>
+          <div class="kpis" id="p-kpis"></div>
+          <div class="card">
+            <h3>Cargar lista</h3>
+            <p class="hint" style="margin:-4px 0 10px">Una persona por línea: <span class="mono">Nombre; correo; área</span>. Al guardar se reemplaza la lista completa.</p>
+            <textarea id="roster" placeholder="María López; maria.lopez@marathon.com; Finanzas"></textarea>
+            <div class="row" style="margin-top:10px"><button class="btn" id="roster-go">Guardar lista</button><button class="btn ghost" id="remind" hidden>Copiar recordatorio para pendientes</button></div>
+          </div>
+          <div id="personal-list"></div>
+        </div>
+
+        <!-- Asistencia -->
+        <div class="pane" data-pane="asistencia" hidden>
+          <div class="pane-h"><h2>Asistencia</h2><p>Marca si cada persona fue a su turno. Así la temporada queda medida, y no solo planificada.</p></div>
+          <div class="kpis" id="as-kpis"></div>
+          <div id="asist-list"></div>
+        </div>
+
+        <!-- Correos -->
+        <div class="pane" data-pane="correos" hidden>
+          <div class="pane-h"><h2>Correos a tiendas</h2><p>Un correo por tienda con quiénes van y en qué horario, desde hoy en adelante. Copia el texto, descarga el Excel de la tienda y adjúntalo en Outlook.</p></div>
+          <div class="row"><button class="btn ghost" id="xls-all">Descargar Excel de todas las tiendas</button><span class="hint">Una hoja por tienda</span></div>
+          <div id="avisos" style="display:grid;gap:14px"></div>
+          <div id="correos" style="display:grid;gap:14px"></div>
+        </div>
+
+        <!-- Temporada -->
+        <div class="pane" data-pane="acceso" hidden>
+          <div class="pane-h"><h2>Acceso</h2><p>PIN de cada país y quién está dentro del panel. Cada PIN da acceso a Marathon y Equinox de ese país. Solo RRHH regional ve esta sección.</p></div>
+          <div class="card">
+            <h3>PIN por país</h3>
+            <p class="hint" style="margin:-4px 0 12px">Quien escribe un PIN queda como RRHH de ese país por 12 horas. Al cambiar un PIN, se cierran los accesos abiertos con el PIN anterior.</p>
+            <div id="pines-list" style="display:grid;gap:12px"></div>
+          </div>
+          <div class="card">
+            <h3>Dentro del panel ahora</h3>
+            <div class="scroll" id="equipo-list"></div>
+          </div>
+          <div class="card">
+            <h3>Correos que pueden entrar</h3>
+            <p class="hint" style="margin:-4px 0 12px">Si agregas dominios, solo entran correos de esos dominios. Sin dominios, entra cualquier correo.</p>
+            <form id="f-dominio" class="row" style="margin-bottom:12px"><input type="text" id="do-dominio" placeholder="marathon.com.ec" aria-label="Dominio" style="max-width:260px"><button class="btn small" type="submit">Permitir dominio</button></form>
+            <div class="row" id="dominios-list"></div>
+          </div>
+        </div>
+
+        <div class="pane" data-pane="temporada" hidden>
+          <div class="pane-h"><h2>Temporada</h2><p id="temp-desc">Lo que ve el equipo en la cabecera y las reglas de reserva.</p></div>
+          <div class="card">
+            <form id="f-temp" class="grid">
+              <div class="field span"><label for="te-nombre">Subtítulo de la campaña</label><input type="text" id="te-nombre" placeholder="Turnos de apoyo en tienda · Navidad 2026"></div>
+              <div class="field"><label for="te-max">Máximo de turnos por persona</label><input type="number" id="te-max" min="1" max="50" placeholder="Sin límite"></div>
+              <div class="field"><label for="te-abiertas">Reservas</label><select id="te-abiertas"><option value="1">Abiertas</option><option value="0">Cerradas</option></select></div>
+              <div class="field"><label for="te-limite">Fecha límite para elegir</label><input type="date" id="te-limite"></div>
+              <div class="field span"><label for="te-msg">Mensaje para el equipo</label><input type="text" id="te-msg" placeholder="Ve con uniforme Marathon y preséntate en caja al llegar."></div>
+              <div class="field span"><label for="te-firma">Firma de los correos</label><input type="text" id="te-firma" placeholder="Talento, Clima y Cultura"></div>
+              <div class="span"><button class="btn" type="submit">Guardar temporada</button></div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="cal-modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="cal-modal-box"><div class="modal-box" id="cal-modal-box"></div></div>
+<div id="toast" hidden></div>
+
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

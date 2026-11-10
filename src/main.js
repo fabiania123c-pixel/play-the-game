@@ -152,12 +152,12 @@ function visibles(){
   const tm=tiendaMap(),p=S.unidad,c=$('#f-ciudad').value,h=hoy();
   return S.turnos.filter(t=>tm[t.tiendaId]&&t.fecha>=h&&tm[t.tiendaId].unidad===p&&(!c||tm[t.tiendaId].ciudad===c));
 }
-function datosOk(){return !!(S.perfil&&S.perfil.nombre.trim()&&S.perfil.area.trim())}
+function datosOk(){return !!(S.perfil&&S.perfil.nombre.trim()&&S.perfil.area.trim()&&okMail(S.perfil.email))}
 function renderSteps(){
   const d=datosOk(),proximos=misRes().filter(r=>r.fecha>=hoy()),r=proximos.length>0;
   const m=maxPP();
   $('#steps').innerHTML=[
-    [d,'Completa tus datos','Nombre y área, una sola vez.'],
+    [d,'Completa tus datos','Nombre, área y correo. Se guardan en este dispositivo.'],
     [r,'Elige día y horario',r?(m===Infinity?`Tienes ${proximos.length} ${pl(proximos.length,'turno')}. Puedes elegir más.`:`Tienes ${proximos.length} de ${m} ${pl(m,'turno')}.`):'Los días con cupo están resaltados. Al reservar, tu cupo se bloquea.'],
     [false,'Agrégalo a tu Outlook','Y pulsa Enviar: así la tienda recibe la invitación.']
   ].map(([done,t,s],i)=>{const now=!done&&(i===0||(i===1&&d)||(i===2&&r));return `<div class="step ${done?'done':''} ${now?'now':''}"><div><b>${esc(t)}</b>${esc(s)}</div></div>`}).join('');
@@ -443,7 +443,7 @@ function sched(k){clearTimeout(timers[k]);timers[k]=setTimeout(async()=>{try{awa
 async function refresh(...ks){try{await Promise.all(ks.map(reload))}catch(e){toast(errMsg(e))}paint()}
 
 /* ---------- Errores ---------- */
-const RPC_MSG={LLENO:'Ese turno se llenó hace un momento. Elige otro.',CRUCE:'Ya tienes un turno que se cruza con ese horario.',MAX:'Llegaste al máximo de turnos permitido. Cancela uno para elegir otro.',CERRADAS:'Las reservas están cerradas por ahora.',YA:'Ya estás inscrito en ese turno.',SIN_PERFIL:'Completa tu nombre y área antes de reservar.',PASADO:'Ese turno ya pasó.',NO_TURNO:'Ese turno ya no existe.',CUPOS_MENORES:'Hay más personas inscritas que esos cupos. Quita a alguien antes de bajarlos.',NO_AUTH:'Tu sesión expiró. Vuelve a entrar.',PIN_INVALIDO:'El PIN debe tener de 4 a 6 números.',NO_REGIONAL:'Solo RRHH regional puede cambiar los PIN.',NO_RESERVA:'No encontramos esa reserva. Recarga la página.',UNIDAD_INVALIDA:'Esa empresa y país no existe.',PAIS_INVALIDO:'Ese país no existe en la app.'};
+const RPC_MSG={LLENO:'Ese turno se llenó hace un momento. Elige otro.',CRUCE:'Ya tienes un turno que se cruza con ese horario.',MAX:'Llegaste al máximo de turnos permitido. Cancela uno para elegir otro.',CERRADAS:'Las reservas están cerradas por ahora.',YA:'Ya estás inscrito en ese turno.',SIN_PERFIL:'Completa tu nombre y área antes de reservar.',PASADO:'Ese turno ya pasó.',NO_TURNO:'Ese turno ya no existe.',CUPOS_MENORES:'Hay más personas inscritas que esos cupos. Quita a alguien antes de bajarlos.',NO_AUTH:'Tu sesión expiró. Vuelve a entrar.',PIN_INVALIDO:'El PIN debe tener de 4 a 6 números.',NO_REGIONAL:'Solo RRHH regional puede cambiar los PIN.',EMAIL_INVALIDO:'Revisa tu correo: parece incompleto.',DOMINIO:'Usa tu correo de la empresa.',NO_RESERVA:'No encontramos esa reserva. Recarga la página.',UNIDAD_INVALIDA:'Esa empresa y país no existe.',PAIS_INVALIDO:'Ese país no existe en la app.'};
 function errMsg(e){
   const m=String(e?.message||'');for(const k in RPC_MSG)if(m.includes(k))return RPC_MSG[k];
   if(e?.code==='23505')return 'Eso ya existe.';
@@ -465,13 +465,13 @@ function saveXlsx(wb,filename){
 let perfilT;
 async function savePerfil(now){
   clearTimeout(perfilT);
-  const run=async()=>{try{await q(sb.from('perfiles').upsert({user_id:S.uid,email:S.email,nombre:S.perfil.nombre.trim(),area:S.perfil.area.trim(),unidad:S.perfil.unidad||null,actualizado:new Date().toISOString()}))}catch(e){toast(errMsg(e))}};
+  const run=async()=>{try{await q(sb.from('perfiles').upsert({user_id:S.uid,email:lc(S.perfil.email),nombre:S.perfil.nombre.trim(),area:S.perfil.area.trim(),unidad:S.perfil.unidad||null,actualizado:new Date().toISOString()}))}catch(e){toast(errMsg(e))}};
   if(now)return run();perfilT=setTimeout(run,600);
 }
 
 /* ---------- RRHH: acceso por país ---------- */
 async function loadRole(){
-  const rows=(await q(sb.from('admins').select('pais,hasta').eq('email',S.email))).filter(r=>!r.hasta||new Date(r.hasta)>new Date());
+  const rows=(await q(sb.from('admins').select('pais,hasta').eq('email',S.ident))).filter(r=>!r.hasta||new Date(r.hasta)>new Date());
   S.owner=rows.some(r=>r.pais==='*');S.grants=rows.filter(r=>r.pais!=='*').map(r=>r.pais);S.admin=S.owner||S.grants.length>0;
   const rl=$('#role');rl.hidden=false;rl.textContent=S.admin?'Recursos Humanos':'Colaborador';
 }
@@ -484,15 +484,15 @@ function renderAdminGate(){
   const key=S.pinFor?`pin:${S.pinFor}`:`list:${S.owner}:${S.grants.join('')}:${S.tiendas.map(t=>t.unidad).join('')}:${UORD.join('')}`;
   if(g.dataset.k===key)return;g.dataset.k=key;
   if(S.pinFor){
-    g.innerHTML=`<div class="eyebrow">Panel RRHH · ${esc(paisName(S.pinFor))}</div><h2>Ingresa el PIN</h2><p>Escribe el PIN de Recursos Humanos de ${esc(paisName(S.pinFor))}. Gestionarás ${esc(empsDe(S.pinFor).join(' y '))} de ese país. Queda activo por 12 horas en tu cuenta.</p>
+    g.innerHTML=`<div class="eyebrow">Panel RRHH · ${esc(paisName(S.pinFor))}</div><h2>Ingresa el PIN</h2><p>${S.pinFor==='*'?'Escribe el PIN regional. Gestionarás todos los países.':`Escribe el PIN de Recursos Humanos de ${esc(paisName(S.pinFor))}.`} Queda activo por 12 horas en este dispositivo.</p>
       <form class="pin-form" id="pin-form"><input type="password" id="pin-in" inputmode="numeric" autocomplete="off" maxlength="6" aria-label="PIN" required><button class="btn" type="submit" id="pin-go">Entrar</button></form>
       <button class="btn ghost small" data-act="pin-back">Elegir otro país</button>`;
     setTimeout(()=>$('#pin-in')?.focus(),30);return;
   }
   g.innerHTML=S.owner
-    ?`<div class="eyebrow">Panel RRHH · Regional</div><h2>¿Qué vas a gestionar?</h2><p>Como RRHH regional entras sin PIN a todo o a cualquier país.</p>
+    ?`<div class="eyebrow">Panel RRHH · Regional</div><h2>¿Qué vas a gestionar?</h2><p>Como RRHH regional entras a todo o a cualquier país.</p>
       <div class="paises"><button class="pais-b reg" data-apais="*"><span class="c">REGIONAL</span><span class="n">Todo</span><span class="s">Todos los países</span></button>${countryBtns('apais')}</div>`
-    :`<div class="eyebrow">Panel RRHH</div><h2>¿Qué país vas a gestionar?</h2><p>Cada país entra con su propio PIN y gestiona solo sus tiendas.</p><div class="paises">${countryBtns('apais')}</div>`;
+    :`<div class="eyebrow">Panel RRHH</div><h2>¿Qué país vas a gestionar?</h2><p>Cada país entra con su propio PIN y gestiona solo sus tiendas. RRHH regional usa el PIN regional.</p><div class="paises"><button class="pais-b reg" data-apais="*"><span class="c">REGIONAL</span><span class="n">Todo</span><span class="s">Con PIN regional</span></button>${countryBtns('apais')}</div>`;
 }
 function renderScope(){
   $('#a-scope').innerHTML=`<span class="lbl">Gestionando</span><span class="n">${esc(scopeName())}</span>${S.adminPais!=='*'?`<span class="hint" style="font-size:12px">${esc(empsDe(S.adminPais).join(' y '))}</span>`:''}<button class="btn ghost tiny" data-act="a-change">${S.owner?'Cambiar':'Salir del panel'}</button>`;
@@ -505,10 +505,10 @@ function renderScope(){
 function renderAcceso(){
   if(!S.owner)return;
   const pl2=$('#pines-list');
-  if(!pl2.contains(document.activeElement))pl2.innerHTML=PAISORD().map(k=>[k,`${PAISES[k]||k} · ${empsDe(k).join(' y ')}`]).map(([k,v])=>{const ok=S.pinEstado.includes(k);return `<div class="pin-row"><strong>${esc(v)}</strong>${ok?'<span class="tag hi">Configurado</span>':'<span class="tag lo">Sin PIN</span>'}<input type="password" inputmode="numeric" maxlength="6" id="pin-${k}" placeholder="4 a 6 dígitos" aria-label="Nuevo PIN para ${esc(v)}"><button class="btn small" data-act="pin-save" data-id="${k}">${ok?'Cambiar':'Guardar'}</button></div>`}).join('');
-  const rows=(S.equipo||[]).filter(r=>r.pais!=='*');const el=$('#equipo-list');
+  if(!pl2.contains(document.activeElement))pl2.innerHTML=[['*','Regional · todos los países'],...PAISORD().map(k=>[k,`${PAISES[k]||k}`])].map(([k,v])=>{const ok=S.pinEstado.includes(k);return `<div class="pin-row"><strong>${esc(v)}</strong>${ok?'<span class="tag hi">Configurado</span>':'<span class="tag lo">Sin PIN</span>'}<input type="password" inputmode="numeric" maxlength="6" id="pin-${k}" placeholder="4 a 6 dígitos" aria-label="Nuevo PIN para ${esc(v)}"><button class="btn small" data-act="pin-save" data-id="${k}">${ok?'Cambiar':'Guardar'}</button></div>`}).join('');
+  const rows=(S.equipo||[]).filter(r=>r.hasta);const el=$('#equipo-list');
   el.innerHTML=rows.length?`<table class="t"><thead><tr><th>Correo</th><th>Gestiona</th><th>Activo hasta</th><th></th></tr></thead><tbody>${rows.map(r=>{const h=r.hasta?new Date(r.hasta):null;
-    return `<tr><td class="num">${esc(r.email)}</td><td>${esc(PAISES[r.pais]||r.pais)}</td><td class="num">${h?`${String(h.getHours()).padStart(2,'0')}:${String(h.getMinutes()).padStart(2,'0')} · ${h.getDate()}/${h.getMonth()+1}`:'Permanente'}</td><td><button class="btn ghost tiny" data-act="del-admin" data-id="${esc(r.email)}|${esc(r.pais)}">Quitar acceso</button></td></tr>`}).join('')}</tbody></table>`
+    return `<tr><td class="num">${esc(r.email.startsWith('anon:')?'Dispositivo ·'+r.email.slice(-4):r.email)}</td><td>${esc(r.pais==='*'?'Todos (regional)':(PAISES[r.pais]||r.pais))}</td><td class="num">${h?`${String(h.getHours()).padStart(2,'0')}:${String(h.getMinutes()).padStart(2,'0')} · ${h.getDate()}/${h.getMonth()+1}`:'Permanente'}</td><td><button class="btn ghost tiny" data-act="del-admin" data-id="${esc(r.email)}|${esc(r.pais)}">Quitar acceso</button></td></tr>`}).join('')}</tbody></table>`
     :'<p class="hint">Nadie ha entrado con PIN en las últimas 12 horas.</p>';
   const dl=$('#dominios-list');
   dl.innerHTML=(S.dominios||[]).length?(S.dominios.map(d=>`<span class="tag me" style="font-size:12px;text-transform:none;letter-spacing:0">@${esc(d)} <button class="btn ghost tiny" style="margin-left:4px;padding:0 6px" data-act="del-dominio" data-id="${esc(d)}" aria-label="Quitar ${esc(d)}">×</button></span>`).join(' ')):'<span class="hint">Todavía no hay dominios: solo RRHH regional puede entrar. Agrega el dominio de correo de la empresa para que entren los colaboradores.</span>';
@@ -519,7 +519,7 @@ async function unlock(p){S.adminPais=p;S.pinFor=null;ss.set('ptg-admin',p);tempF
 async function reservar(tid,btn){
   if(S.busy)return;const t=S.turnos.find(x=>x.id===tid);if(!t)return;
   if(!abiertas())return toast('Las reservas están cerradas por ahora.');
-  if(!datosOk()){$(!S.perfil.nombre.trim()?'#nombre':'#area').focus();return toast('Completa tu nombre y área antes de reservar.')}
+  if(!datosOk()){$(!S.perfil.nombre.trim()?'#nombre':!S.perfil.area.trim()?'#area':'#correo').focus();return toast(okMail(S.perfil.email)||!S.perfil.nombre.trim()||!S.perfil.area.trim()?'Completa tu nombre, área y correo antes de reservar.':'Revisa tu correo.')}
   const mias=misRes().filter(r=>r.fecha>=hoy());
   if(mias.length>=maxPP())return toast(`Ya tienes ${mias.length} de ${maxPP()} ${pl(maxPP(),'turno')}. Cancela uno para elegir otro.`);
   const choque=mias.map(r=>S.turnos.find(x=>x.id===r.turnoId)).filter(x=>x&&x.fecha===t.fecha).find(x=>toMin(x.inicio)<toMin(t.fin)&&toMin(t.inicio)<toMin(x.fin));
@@ -527,7 +527,7 @@ async function reservar(tid,btn){
   S.busy=true;btn.disabled=true;btn.textContent='Reservando…';
   try{
     await savePerfil(true);
-    await q(sb.rpc('reservar',{p_turno:tid}));
+    await q(sb.rpc('reservar',{p_turno:tid,p_nombre:S.perfil.nombre.trim(),p_area:S.perfil.area.trim(),p_email:lc(S.perfil.email)}));
     await reload('reservas');S.modalDone=null;openCalModal();
   }catch(e){toast(errMsg(e));await reload('reservas').catch(()=>{})}
   finally{S.busy=false;paint()}
@@ -660,7 +660,7 @@ document.addEventListener('click',async e=>{
 $('#prev').addEventListener('click',()=>{S.calM--;if(S.calM<0){S.calM=11;S.calY--}renderCal()});
 $('#next').addEventListener('click',()=>{S.calM++;if(S.calM>11){S.calM=0;S.calY++}renderCal()});
 $('#f-ciudad').addEventListener('change',()=>{renderCal();renderDay()});
-for(const k of ['nombre','area'])$('#'+k).addEventListener('input',()=>{S.perfil[k]=$('#'+k).value;savePerfil();renderSteps()});
+for(const k of ['nombre','area','correo'])$('#'+k).addEventListener('input',()=>{S.perfil[k==='correo'?'email':k]=$('#'+k).value;savePerfil();renderSteps();const n=$('#me .n');if(n&&k==='nombre')n.textContent=S.perfil.nombre});
 $('#f-tienda').addEventListener('submit',async e=>{e.preventDefault();
   const d={nombre:$('#ti-nombre').value.trim(),ciudad:$('#ti-ciudad').value.trim(),unidad:$('#ti-pais').value,email:$('#ti-email').value.trim()};
   if(!d.nombre||!d.ciudad)return;if(d.email&&!okMail(d.email))return toast('Revisa el correo de la tienda.');
@@ -734,36 +734,23 @@ $('#f-dominio').addEventListener('submit',async e=>{e.preventDefault();
 });
 
 /* ---------- Login ---------- */
-function showLogin(state){
+function showError(msg){
   $('#app').hidden=true;$('#status').hidden=true;const el=$('#auth');el.hidden=false;
-  $('#season').innerHTML='<b>Turnos de apoyo en tienda</b>';
-  if(state==='blocked'){
-    el.innerHTML=`<div class="gate"><div class="eyebrow">Acceso</div><h2>Usa tu correo de ${esc(BRAND.nombre)}</h2><p>El correo <b>${esc(S.email)}</b> no está habilitado para Play the Game. Entra con tu correo corporativo o pide acceso a Recursos Humanos.</p><button class="btn" data-act="logout">Entrar con otro correo</button></div>`;return}
-  el.innerHTML=`<div class="gate"><div class="eyebrow">${esc(BRAND.nombre)} · Talento, Clima y Cultura</div><h2>Entra con tu correo</h2><p>Te enviamos un enlace para entrar. No necesitas contraseña.</p>
-    <form class="login-form" id="login-form"><input type="email" id="login-email" required placeholder="tu correo de trabajo" autocomplete="email" aria-label="Tu correo"><button class="btn" type="submit" id="login-go">Enviar enlace</button></form>
-    <p class="hint" id="login-msg" role="status"></p></div>`;
-  $('#login-form').addEventListener('submit',async e=>{e.preventDefault();
-    const email=lc($('#login-email').value);if(!okMail(email))return;const go=$('#login-go');go.disabled=true;go.textContent='Enviando…';
-    const{error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin}});
-    go.disabled=false;go.textContent='Enviar enlace';
-    $('#login-msg').textContent=error?(/rate|seconds|too many/i.test(error.message)?'Espera un minuto antes de pedir otro enlace.':'No se pudo enviar el enlace. Revisa el correo e inténtalo de nuevo.')
-      :`Listo. Revisa ${email} (también la carpeta de spam) y abre el enlace en este mismo dispositivo.`;
-  });
+  el.innerHTML=`<div class="gate"><div class="eyebrow">${esc(BRAND.nombre)} · Talento, Clima y Cultura</div><h2>No pudimos conectar</h2><p>${esc(msg)}</p><button class="btn" onclick="location.reload()">Intentar de nuevo</button></div>`;
 }
 
 /* ---------- Arranque ---------- */
 async function start(session){
   if(S.started)return;S.started=true;
-  S.uid=session.user.id;S.email=lc(session.user.email);
+  S.uid=session.user.id;S.ident=lc(session.user.email)||('anon:'+S.uid);
   try{
-    if(!(await q(sb.rpc('permitido')))){S.started=false;return showLogin('blocked')}
     $('#auth').hidden=true;$('#app').hidden=false;$('#status').hidden=false;
     await loadRole();
     {const a=ss.get('ptg-admin');if(a&&((S.owner&&(a==='*'||PAISES[a]))||S.grants.includes(a)))S.adminPais=a;else if(!S.owner&&S.grants.length===1)S.adminPais=S.grants[0]}
-    const pf=await q(sb.from('perfiles').select('nombre,area,unidad').eq('user_id',S.uid).maybeSingle());
-    S.perfil={nombre:pf?.nombre||'',area:pf?.area||'',unidad:pf?.unidad||null};S.unidad=S.perfil.unidad;
-    $('#nombre').value=S.perfil.nombre;$('#area').value=S.perfil.area;$('#mi-correo').textContent=S.email;
-    $('#me').innerHTML=`<div style="text-align:right"><div class="n"></div><div class="row" style="gap:4px;justify-content:flex-end;margin-top:4px"><button class="btn ghost tiny" id="rrhh-btn" hidden>Acceso RRHH</button><button class="btn ghost tiny" data-act="logout">Salir</button></div></div>`;$('#me .n').textContent=S.perfil.nombre||S.email;
+    const pf=await q(sb.from('perfiles').select('nombre,area,unidad,email').eq('user_id',S.uid).maybeSingle());
+    S.perfil={nombre:pf?.nombre||'',area:pf?.area||'',email:pf?.email||'',unidad:pf?.unidad||null};S.unidad=S.perfil.unidad;
+    $('#nombre').value=S.perfil.nombre;$('#area').value=S.perfil.area;$('#correo').value=S.perfil.email;
+    $('#me').innerHTML=`<div style="text-align:right"><div class="n"></div><div class="row" style="gap:4px;justify-content:flex-end;margin-top:4px"><button class="btn ghost tiny" id="rrhh-btn" hidden>Acceso RRHH</button></div></div>`;$('#me .n').textContent=S.perfil.nombre||'';
     await reload('unidades');if(S.unidad&&!U[S.unidad])S.unidad=S.perfil.unidad=null;
     await Promise.all(['tiendas','turnos','reservas','config','avisos','convocados','admins'].map(reload));
     S.ready=true;
@@ -775,11 +762,15 @@ async function start(session){
     ch.on('postgres_changes',{event:'*',schema:SCHEMA,table:'avisos'},()=>sched('avisos'));
     ch.subscribe();
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh('tiendas','turnos','reservas','config','avisos')});
-  }catch(e){S.started=false;toast(errMsg(e))}
+  }catch(e){S.started=false;showError('Revisa tu conexión a internet y vuelve a intentar.')}
 }
 (async()=>{
   paint();
-  const{data:{session}}=await sb.auth.getSession();
-  sb.auth.onAuthStateChange((ev,sess)=>{if(sess&&(ev==='SIGNED_IN'||ev==='INITIAL_SESSION'))start(sess)});
-  if(session)start(session);else showLogin();
+  let{data:{session}}=await sb.auth.getSession();
+  if(!session){
+    const{data,error}=await sb.auth.signInAnonymously();
+    if(error)return showError(/rate|too many/i.test(error.message||'')?'Hay muchas personas entrando al mismo tiempo. Espera un minuto y vuelve a intentar.':'No se pudo abrir la app. Vuelve a intentar en un momento.');
+    session=data.session;
+  }
+  start(session);
 })();

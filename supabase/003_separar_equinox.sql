@@ -18,6 +18,6 @@ language sql stable security definer set search_path = ptg as $$
 $$;
 
 drop policy if exists unidades_sel on ptg.unidades;
-create policy unidades_sel on ptg.unidades for select to authenticated using (permitido());
+create policy unidades_sel on ptg.unidades for select to authenticated using (ptg.permitido());
 drop policy if exists dominios_sel on ptg.dominios;
-create policy dominios_sel on ptg.dominios for select to authenticated using (es_regional());
+create policy dominios_sel on ptg.dominios for select to authenticated using (ptg.es_regional());

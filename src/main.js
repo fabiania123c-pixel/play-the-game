@@ -2,9 +2,19 @@ import './style.css';
 import { createClient } from '@supabase/supabase-js';
 import * as XLSX from 'xlsx';
 
+// ---- Empresa de este despliegue (un proyecto de Vercel por empresa) ----
+const MARCA=String(import.meta.env.VITE_MARCA||'marathon').toLowerCase()==='equinox'?'equinox':'marathon';
+const SCHEMA=import.meta.env.VITE_SCHEMA||(MARCA==='equinox'?'ptg_eqx':'ptg');
+const BRAND={marathon:{nombre:'Marathon',ejemploTienda:'Marathon Quicentro',fondo:'#0a0f1e',acento:'#1B4B8A'},
+             equinox:{nombre:'Equinox',ejemploTienda:'Equinox CCI',fondo:'#0b0b0b',acento:'#F26522'}}[MARCA];
+document.documentElement.dataset.marca=MARCA;document.title=`Play the Game · ${BRAND.nombre}`;
+{const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=BRAND.fondo;
+ const ic=document.querySelector('link[rel="icon"]');if(ic)ic.href=`data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='${BRAND.acento}'/><path d='M12 9l11 7-11 7z' fill='#fff'/></svg>`)}`;
+ const tn=document.getElementById('ti-nombre');if(tn)tn.placeholder=BRAND.ejemploTienda;}
+
 const SUPABASE_URL=import.meta.env.VITE_SUPABASE_URL, SUPABASE_KEY=import.meta.env.VITE_SUPABASE_ANON_KEY;
 if(!SUPABASE_URL||!SUPABASE_KEY)document.body.insertAdjacentHTML('afterbegin','<p style="padding:16px;background:#fff;color:#000">Faltan VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY. Revisa el archivo .env o las variables de entorno en Vercel.</p>');
-const sb=createClient(SUPABASE_URL||'http://localhost',SUPABASE_KEY||'x',{db:{schema:'ptg'},auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+const sb=createClient(SUPABASE_URL||'http://localhost',SUPABASE_KEY||'x',{db:{schema:SCHEMA},auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 
 
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -16,10 +26,10 @@ const uEmp=c=>(U[c]&&U[c].empresa)||'';
 const uName=c=>c==='*'?'Todas las empresas':`${uEmp(c)} ${PAISES[uPais(c)]||''}`.trim();
 function parseUnidad(x){const v=String(x||'').trim().toUpperCase();if(U[v]&&inScope(v))return v;
   const su=scopeUnits();if(!v&&su.length===1)return su[0];
-  const emp=/EQU|EQX/.test(v)?'Equinox':'Marathon';
+  const emps=[...new Set(UORD.map(uEmp))];const emp=emps.length===1?emps[0]:(/EQU|EQX/.test(v)?'Equinox':'Marathon');
   const pa=(v.match(/\b(EC|PE|CL|BO|CO)\b/)||[])[1]||(/PER/.test(v)?'PE':/CHI/.test(v)?'CL':/BOL/.test(v)?'BO':/ECU/.test(v)?'EC':'')||(S.adminPais!=='*'?S.adminPais:'');
   return su.find(c=>uEmp(c)===emp&&uPais(c)===pa)||'';}
-const firmaDef=c=>`Talento, Clima y Cultura – ${uEmp(c)||'Marathon'}`;
+const firmaDef=c=>`Talento, Clima y Cultura – ${uEmp(c)||BRAND.nombre}`;
 const DIAS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
 const DOW=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -66,7 +76,7 @@ const cfgKeys=()=>S.adminPais==='*'?['temporada']:scopeUnits();
 const cfgKey=()=>cfgKeys()[0];
 const PAISORD=()=>[...new Set(UORD.map(uPais))];
 const empsDe=p=>[...new Set(UORD.filter(c=>uPais(c)===p).map(uEmp))];
-const paisName=p=>p==='*'?'Todas las empresas':(PAISES[p]||p);
+const paisName=p=>p==='*'?'Todos los países':(PAISES[p]||p);
 const scopeName=()=>paisName(S.adminPais);
 const ss={get:k=>{try{return sessionStorage.getItem(k)}catch(_){return null}},set:(k,v)=>{try{v==null?sessionStorage.removeItem(k):sessionStorage.setItem(k,v)}catch(_){}}};
 
@@ -130,12 +140,13 @@ function fillFilters(){
 }
 function paisBtns(attr){
   const emps=[...new Set(UORD.map(c=>uEmp(c)))];
-  return emps.map(e=>`<div class="emp-group"><div class="emp-h">${esc(e)}</div><div class="paises">${UORD.filter(c=>uEmp(c)===e).map(c=>{const n=S.tiendas.filter(t=>t.unidad===c).length;
+  return emps.map(e=>`<div class="emp-group">${emps.length>1?`<div class="emp-h">${esc(e)}</div>`:''}<div class="paises">${UORD.filter(c=>uEmp(c)===e).map(c=>{const n=S.tiendas.filter(t=>t.unidad===c).length;
     return `<button class="pais-b" data-${attr}="${c}"><span class="c">${esc(e.toUpperCase())}</span><span class="n">${esc(PAISES[uPais(c)]||uPais(c))}</span><span class="s">${n} ${pl(n,'tienda')}</span></button>`}).join('')}</div></div>`).join('');
 }
 function renderGates(){
   const need=!S.unidad;$('#pais-gate').hidden=!need;$('#u-main').hidden=need;
-  if(need)$('#pais-gate').innerHTML=`<div class="eyebrow">Antes de empezar</div><h2>¿Dónde trabajas?</h2><p>Elige tu empresa y país. Te mostramos solo sus tiendas y turnos. Puedes cambiarlo cuando quieras desde la cabecera.</p>${paisBtns('pais')}`;
+  const una=new Set(UORD.map(uEmp)).size<2;
+  if(need)$('#pais-gate').innerHTML=`<div class="eyebrow">Antes de empezar</div><h2>${una?'¿En qué país trabajas?':'¿Dónde trabajas?'}</h2><p>${una?'Elige tu país':'Elige tu empresa y país'}. Te mostramos solo sus tiendas y turnos. Puedes cambiarlo cuando quieras desde la cabecera.</p>${paisBtns('pais')}`;
 }
 function visibles(){
   const tm=tiendaMap(),p=S.unidad,c=$('#f-ciudad').value,h=hoy();
@@ -270,7 +281,7 @@ function renderTiendas(){
   const el=$('#tiendas-list');if(S.editTienda&&el.contains(document.activeElement))return;
   if(!A.tiendas.length){el.innerHTML=`<div class="empty"><h3>Sin tiendas</h3>Agrega la primera arriba o carga un ejemplo para probar el flujo.<div class="row" style="justify-content:center;margin-top:14px"><button class="btn ghost" data-act="seed">Cargar ejemplo de prueba</button></div></div>`;return}
   const ts=[...A.tiendas].sort((a,b)=>(a.unidad+a.ciudad+a.nombre).localeCompare(b.unidad+b.ciudad+b.nombre));
-  el.innerHTML=`<div class="card"><h3>${ts.length} ${pl(ts.length,'tienda')}</h3><div class="scroll"><table class="t"><thead><tr><th>Tienda</th><th>Ciudad</th><th>Correo</th><th></th></tr></thead><tbody>${ts.map(t=>S.editTienda===t.id?`<tr class="editing"><td><input type="text" id="ed-nombre" value="${esc(t.nombre)}" aria-label="Nombre de la tienda"></td><td><input type="text" id="ed-ciudad" value="${esc(t.ciudad)}" aria-label="Ciudad">${scopeUnits().length>1?`<select id="ed-pais" aria-label="Empresa y país" style="margin-top:6px">${scopeUnits().map(k=>`<option value="${k}" ${k===t.unidad?'selected':''}>${esc(uName(k))}</option>`).join('')}</select>`:''}</td><td><input type="email" id="ed-email" value="${esc(t.email||'')}" placeholder="tienda@marathon.com" aria-label="Correo de la tienda"></td><td><div class="row" style="gap:4px"><button class="btn tiny" data-act="save-tienda" data-id="${esc(t.id)}">Guardar</button><button class="btn ghost tiny" data-act="edit-cancel">Cancelar</button></div></td></tr>`
+  el.innerHTML=`<div class="card"><h3>${ts.length} ${pl(ts.length,'tienda')}</h3><div class="scroll"><table class="t"><thead><tr><th>Tienda</th><th>Ciudad</th><th>Correo</th><th></th></tr></thead><tbody>${ts.map(t=>S.editTienda===t.id?`<tr class="editing"><td><input type="text" id="ed-nombre" value="${esc(t.nombre)}" aria-label="Nombre de la tienda"></td><td><input type="text" id="ed-ciudad" value="${esc(t.ciudad)}" aria-label="Ciudad">${scopeUnits().length>1?`<select id="ed-pais" aria-label="Empresa y país" style="margin-top:6px">${scopeUnits().map(k=>`<option value="${k}" ${k===t.unidad?'selected':''}>${esc(uName(k))}</option>`).join('')}</select>`:''}</td><td><input type="email" id="ed-email" value="${esc(t.email||'')}" placeholder="tienda@empresa.com" aria-label="Correo de la tienda"></td><td><div class="row" style="gap:4px"><button class="btn tiny" data-act="save-tienda" data-id="${esc(t.id)}">Guardar</button><button class="btn ghost tiny" data-act="edit-cancel">Cancelar</button></div></td></tr>`
   :`<tr><td>${esc(t.nombre)}</td><td>${esc(t.ciudad)}<div class="hint">${esc(uName(t.unidad))}</div></td><td class="num">${t.email?esc(t.email):'<span class="hint">Sin correo: no recibirá invitación</span>'}</td><td><div class="row" style="gap:4px"><button class="btn ghost tiny" data-act="edit-tienda" data-id="${esc(t.id)}">Editar</button><button class="btn ghost tiny" data-act="del-tienda" data-id="${esc(t.id)}">Eliminar</button></div></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 function fillTurnoSelect(){
@@ -480,8 +491,8 @@ function renderAdminGate(){
   }
   g.innerHTML=S.owner
     ?`<div class="eyebrow">Panel RRHH · Regional</div><h2>¿Qué vas a gestionar?</h2><p>Como RRHH regional entras sin PIN a todo o a cualquier país.</p>
-      <div class="paises"><button class="pais-b reg" data-apais="*"><span class="c">REGIONAL</span><span class="n">Todo</span><span class="s">Marathon y Equinox, todos los países</span></button>${countryBtns('apais')}</div>`
-    :`<div class="eyebrow">Panel RRHH</div><h2>¿Qué país vas a gestionar?</h2><p>Cada país entra con su propio PIN y gestiona sus tiendas de Marathon y Equinox.</p><div class="paises">${countryBtns('apais')}</div>`;
+      <div class="paises"><button class="pais-b reg" data-apais="*"><span class="c">REGIONAL</span><span class="n">Todo</span><span class="s">Todos los países</span></button>${countryBtns('apais')}</div>`
+    :`<div class="eyebrow">Panel RRHH</div><h2>¿Qué país vas a gestionar?</h2><p>Cada país entra con su propio PIN y gestiona solo sus tiendas.</p><div class="paises">${countryBtns('apais')}</div>`;
 }
 function renderScope(){
   $('#a-scope').innerHTML=`<span class="lbl">Gestionando</span><span class="n">${esc(scopeName())}</span>${S.adminPais!=='*'?`<span class="hint" style="font-size:12px">${esc(empsDe(S.adminPais).join(' y '))}</span>`:''}<button class="btn ghost tiny" data-act="a-change">${S.owner?'Cambiar':'Salir del panel'}</button>`;
@@ -500,7 +511,7 @@ function renderAcceso(){
     return `<tr><td class="num">${esc(r.email)}</td><td>${esc(PAISES[r.pais]||r.pais)}</td><td class="num">${h?`${String(h.getHours()).padStart(2,'0')}:${String(h.getMinutes()).padStart(2,'0')} · ${h.getDate()}/${h.getMonth()+1}`:'Permanente'}</td><td><button class="btn ghost tiny" data-act="del-admin" data-id="${esc(r.email)}|${esc(r.pais)}">Quitar acceso</button></td></tr>`}).join('')}</tbody></table>`
     :'<p class="hint">Nadie ha entrado con PIN en las últimas 12 horas.</p>';
   const dl=$('#dominios-list');
-  dl.innerHTML=(S.dominios||[]).length?(S.dominios.map(d=>`<span class="tag me" style="font-size:12px;text-transform:none;letter-spacing:0">@${esc(d)} <button class="btn ghost tiny" style="margin-left:4px;padding:0 6px" data-act="del-dominio" data-id="${esc(d)}" aria-label="Quitar ${esc(d)}">×</button></span>`).join(' ')):'<span class="hint">Sin restricción: cualquier correo puede entrar y reservar.</span>';
+  dl.innerHTML=(S.dominios||[]).length?(S.dominios.map(d=>`<span class="tag me" style="font-size:12px;text-transform:none;letter-spacing:0">@${esc(d)} <button class="btn ghost tiny" style="margin-left:4px;padding:0 6px" data-act="del-dominio" data-id="${esc(d)}" aria-label="Quitar ${esc(d)}">×</button></span>`).join(' ')):'<span class="hint">Todavía no hay dominios: solo RRHH regional puede entrar. Agrega el dominio de correo de la empresa para que entren los colaboradores.</span>';
 }
 async function unlock(p){S.adminPais=p;S.pinFor=null;ss.set('ptg-admin',p);tempFilled=false;showSub('resumen');await refresh('avisos','convocados','admins')}
 
@@ -717,7 +728,7 @@ document.addEventListener('submit',async e=>{if(e.target.id!=='pin-form')return;
   }catch(err){toast(errMsg(err))}finally{if(go.isConnected)go.disabled=false}
 });
 $('#f-dominio').addEventListener('submit',async e=>{e.preventDefault();
-  const d=lc($('#do-dominio').value).replace(/^@/,'');if(!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(d))return toast('Escribe un dominio como marathon.com.ec');
+  const d=lc($('#do-dominio').value).replace(/^@/,'');if(!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(d))return toast('Escribe un dominio como empresa.com.ec');
   try{await q(sb.from('dominios').upsert({dominio:d}));$('#do-dominio').value='';toast(`Dominio @${d} permitido.`)}catch(err){toast(errMsg(err))}
   await refresh('admins');
 });
@@ -727,9 +738,9 @@ function showLogin(state){
   $('#app').hidden=true;$('#status').hidden=true;const el=$('#auth');el.hidden=false;
   $('#season').innerHTML='<b>Turnos de apoyo en tienda</b>';
   if(state==='blocked'){
-    el.innerHTML=`<div class="gate"><div class="eyebrow">Acceso</div><h2>Usa tu correo de Marathon</h2><p>El correo <b>${esc(S.email)}</b> no está habilitado para Play the Game. Entra con tu correo corporativo o pide acceso a Recursos Humanos.</p><button class="btn" data-act="logout">Entrar con otro correo</button></div>`;return}
-  el.innerHTML=`<div class="gate"><div class="eyebrow">Marathon · Equinox · Talento, Clima y Cultura</div><h2>Entra con tu correo</h2><p>Te enviamos un enlace para entrar. No necesitas contraseña.</p>
-    <form class="login-form" id="login-form"><input type="email" id="login-email" required placeholder="nombre@marathon.com" autocomplete="email" aria-label="Tu correo"><button class="btn" type="submit" id="login-go">Enviar enlace</button></form>
+    el.innerHTML=`<div class="gate"><div class="eyebrow">Acceso</div><h2>Usa tu correo de ${esc(BRAND.nombre)}</h2><p>El correo <b>${esc(S.email)}</b> no está habilitado para Play the Game. Entra con tu correo corporativo o pide acceso a Recursos Humanos.</p><button class="btn" data-act="logout">Entrar con otro correo</button></div>`;return}
+  el.innerHTML=`<div class="gate"><div class="eyebrow">${esc(BRAND.nombre)} · Talento, Clima y Cultura</div><h2>Entra con tu correo</h2><p>Te enviamos un enlace para entrar. No necesitas contraseña.</p>
+    <form class="login-form" id="login-form"><input type="email" id="login-email" required placeholder="tu correo de trabajo" autocomplete="email" aria-label="Tu correo"><button class="btn" type="submit" id="login-go">Enviar enlace</button></form>
     <p class="hint" id="login-msg" role="status"></p></div>`;
   $('#login-form').addEventListener('submit',async e=>{e.preventDefault();
     const email=lc($('#login-email').value);if(!okMail(email))return;const go=$('#login-go');go.disabled=true;go.textContent='Enviando…';
@@ -760,8 +771,8 @@ async function start(session){
     paint();
     if(miPend())openCalModal();
     const ch=sb.channel('ptg');
-    for(const t of ['tiendas','turnos','reservas','config'])ch.on('postgres_changes',{event:'*',schema:'ptg',table:t},()=>sched(t));
-    ch.on('postgres_changes',{event:'*',schema:'ptg',table:'avisos'},()=>sched('avisos'));
+    for(const t of ['tiendas','turnos','reservas','config'])ch.on('postgres_changes',{event:'*',schema:SCHEMA,table:t},()=>sched(t));
+    ch.on('postgres_changes',{event:'*',schema:SCHEMA,table:'avisos'},()=>sched('avisos'));
     ch.subscribe();
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh('tiendas','turnos','reservas','config','avisos')});
   }catch(e){S.started=false;toast(errMsg(e))}

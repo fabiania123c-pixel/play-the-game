@@ -1,6 +1,10 @@
-# Play the Game · Marathon
+# Play the Game
 
-Turnos de apoyo en tienda para el personal administrativo. Cada colaborador elige
+Turnos de apoyo en tienda para el personal administrativo.
+
+**Dos apps separadas con el mismo código:** Marathon (azul, schema `ptg`) y Equinox
+(negro y naranja, schema `ptg_eqx`). Cada una tiene su link, sus datos, sus PIN y sus
+dominios de correo; ninguna ve nombres, tiendas ni personas de la otra. Cada colaborador elige
 día, tienda y horario. RRHH de cada país gestiona tiendas, turnos, avisos y asistencia.
 
 **Stack:** Vite (JavaScript) + Supabase (base de datos, login, tiempo real) + Vercel.
@@ -11,8 +15,10 @@ día, tienda y horario. RRHH de cada país gestiona tiendas, turnos, avisos y as
 
 1. Proyecto: **SOP_Marathon** (cuenta de Supabase de Marathon). Play the Game vive en su
    propio schema `ptg`, separado de las tablas de SOP.
-2. **SQL Editor → New query**: pega y ejecuta todo `supabase/migrations/001_init.sql`.
-   Luego **Project Settings → API → Exposed schemas**: agrega `ptg` y guarda
+2. **SQL Editor → New query**: ejecuta `supabase/migrations/001_init.sql` (Marathon) y
+   `supabase/equinox/001_init_equinox.sql` (Equinox). Si Marathon ya estaba creado con la
+   versión anterior, ejecuta además `supabase/003_separar_equinox.sql`.
+   Luego **Integrations → Data API → Exposed schemas**: agrega `ptg` y `ptg_eqx` y guarda
    (sin esto la app no ve las tablas).
 3. Abre `supabase/002_admin_inicial.sql`, cambia `climamarathon@gmail.com` por tu correo
    de Marathon y ejecútalo. Con ese correo entras como **RRHH regional**.
@@ -36,36 +42,41 @@ Para que le llegue el enlace a cualquier colaborador, usa el Gmail del área:
 5. **Authentication → Emails → Templates → Magic Link**: cambia el asunto a
    `Tu enlace para entrar a Play the Game` y el cuerpo a:
    ```html
-   <h2>Play the Game · Marathon</h2>
+   <h2>Play the Game</h2>
    <p>Haz clic para entrar y elegir tu turno de apoyo en tienda:</p>
    <p><a href="{{ .ConfirmationURL }}">Entrar a Play the Game</a></p>
    <p>Si no pediste este enlace, ignora este correo.</p>
    ```
 
-## 2. Vercel
+## 2. Vercel: dos proyectos desde el mismo repositorio
 
-1. **Add New → Project** → importa el repositorio `play-the-game` de GitHub.
-2. Framework: **Vite** (lo detecta solo). Build: `npm run build`. Output: `dist`.
-3. **Environment Variables**:
-   - `VITE_SUPABASE_URL` = Project URL de Supabase
-   - `VITE_SUPABASE_ANON_KEY` = clave anon public
+Crea **dos proyectos** en Vercel importando el mismo repo `play-the-game` (Add New → Project,
+framework **Vite**). Cada uno con estas variables:
+
+| Variable | Marathon | Equinox |
+|---|---|---|
+| `VITE_SUPABASE_URL` | Project URL | Project URL |
+| `VITE_SUPABASE_ANON_KEY` | clave anon | clave anon |
+| `VITE_MARCA` | `marathon` | `equinox` |
+
+`VITE_MARCA` define colores, textos y el schema (`ptg` o `ptg_eqx`). Cada `git push`
+actualiza las dos apps.
 4. Deploy. Copia la URL final (por ejemplo `https://play-the-game.vercel.app`).
 5. De vuelta en Supabase → **Authentication → URL Configuration**:
    - **No cambies el Site URL** (lo usa la app SOP del mismo proyecto).
    - Redirect URLs: agrega la URL de Vercel y `http://localhost:5173` (para pruebas locales)
 
-## 3. Primer uso
+## 3. Primer uso (en cada app: Marathon y Equinox)
 
-1. Entra con tu correo de Marathon → Panel RRHH → **Toda la región** (sin PIN).
-2. **Acceso y PIN**: crea el PIN de cada país (4 a 6 números) y compártelo por privado con
-   RRHH de ese país. Cada PIN da acceso a Marathon y Equinox de ese país. Opcional: agrega los dominios de Marathon para que solo
-   entren correos corporativos.
-3. RRHH de cada país entra a la app, pulsa **Acceso RRHH**, elige su país y escribe el PIN.
-   Queda activo 12 horas; después lo vuelve a pedir. Tras 5 intentos fallidos se bloquea
-   15 minutos.
-4. Cada RRHH de país carga sus tiendas (con correo de tienda), turnos y su lista de
-   personal convocado.
-5. Comparte la URL de Vercel con el personal administrativo.
+1. Entra con climamarathon@gmail.com → Panel RRHH → **Todo** (sin PIN).
+2. **Acceso y PIN → Correos que pueden entrar**: agrega el dominio de correo de esa empresa.
+   Sin dominio, solo entra RRHH regional.
+3. **Acceso y PIN → PIN por país**: crea el PIN de cada país (4 a 6 números) y compártelo por
+   privado con RRHH de ese país.
+4. RRHH de cada país entra, pulsa **Acceso RRHH**, elige su país y escribe el PIN. Queda
+   activo 12 horas. Tras 5 intentos fallidos se bloquea 15 minutos.
+5. Cada RRHH carga sus tiendas (con correo de tienda), turnos y personal convocado.
+6. Comparte el link de cada app con el personal administrativo de esa empresa.
 
 ## Desarrollo local
 

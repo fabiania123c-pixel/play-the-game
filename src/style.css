@@ -7,6 +7,11 @@
   --mono:"DM Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
   color-scheme:dark;
 }
+/* Equinox: negro y naranja */
+:root[data-marca="equinox"]{
+  --bg:#0b0b0b; --panel:#151413; --panel-2:#1e1c1a; --line:#2b2825; --line-2:#3b3632;
+  --fg:#f5f1eb; --muted:#a8a097; --faint:#6e6862; --accent:#F26522; --accent-hi:#FF8A3D; --on-accent:#111111;
+}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 72px}

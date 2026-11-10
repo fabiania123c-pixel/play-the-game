@@ -1,5 +1,5 @@
 -- =====================================================================
--- Play the Game · Marathon · Esquema inicial
+-- Play the Game · MARATHON · Esquema inicial (schema ptg)
 -- Todo vive en el schema "ptg" para no mezclarse con otras apps del mismo
 -- proyecto de Supabase. Ejecutar completo en SQL Editor → New query → Run.
 -- Después: Project Settings → API → Exposed schemas → agregar "ptg".
@@ -21,8 +21,7 @@ create table if not exists ptg.unidades (
   orden    int  not null default 0
 );
 insert into ptg.unidades (codigo, empresa, pais, orden) values
-  ('MAR-EC','Marathon','EC',1),('MAR-PE','Marathon','PE',2),('MAR-CL','Marathon','CL',3),('MAR-BO','Marathon','BO',4),
-  ('EQX-EC','Equinox','EC',5),('EQX-PE','Equinox','PE',6),('EQX-CL','Equinox','CL',7)
+  ('MAR-EC','Marathon','EC',1),('MAR-PE','Marathon','PE',2),('MAR-CL','Marathon','CL',3),('MAR-BO','Marathon','BO',4)
 on conflict (codigo) do nothing;
 
 -- Acceso a RRHH por país (cubre todas las empresas de ese país). '*' = regional
@@ -50,7 +49,7 @@ create table if not exists ptg.pin_intentos (
 );
 create index if not exists pin_intentos_email on ptg.pin_intentos (email, creado);
 
--- Dominios de correo permitidos (vacío = cualquier correo puede entrar)
+-- Dominios de correo de la empresa: solo esos correos (y RRHH regional) pueden entrar
 create table if not exists ptg.dominios (
   dominio text primary key check (dominio = lower(dominio))
 );
@@ -172,8 +171,7 @@ $$;
 create or replace function ptg.permitido() returns boolean
 language sql stable security definer set search_path = ptg as $$
   select auth.uid() is not null and (
-       not exists (select 1 from dominios)
-    or exists (select 1 from dominios d where mi_email() like '%@' || d.dominio)
+       exists (select 1 from dominios d where mi_email() like '%@' || d.dominio)
     or exists (select 1 from admins where email = mi_email() and (hasta is null or hasta > now()))
   )
 $$;
@@ -390,7 +388,7 @@ alter table ptg.pin_intentos enable row level security; -- sin políticas
 
 -- unidades: todos con sesión las ven; solo regional las cambia
 drop policy if exists unidades_sel on ptg.unidades;
-create policy unidades_sel on ptg.unidades for select to authenticated using (true);
+create policy unidades_sel on ptg.unidades for select to authenticated using (permitido());
 drop policy if exists unidades_all on ptg.unidades;
 create policy unidades_all on ptg.unidades for all to authenticated using (es_regional()) with check (es_regional());
 
@@ -406,7 +404,7 @@ create policy admins_del on ptg.admins for delete to authenticated using (es_reg
 
 -- dominios
 drop policy if exists dominios_sel on ptg.dominios;
-create policy dominios_sel on ptg.dominios for select to authenticated using (true);
+create policy dominios_sel on ptg.dominios for select to authenticated using (es_regional());
 drop policy if exists dominios_all on ptg.dominios;
 create policy dominios_all on ptg.dominios for all to authenticated using (es_regional()) with check (es_regional());
 

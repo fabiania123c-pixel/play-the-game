@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Play the Game · Marathon</title>
+<title>Play the Game</title>
 <meta name="theme-color" content="#0a0f1e">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231B4B8A'/%3E%3Cpath d='M12 9l11 7-11 7z' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -112,17 +112,17 @@
           <div class="card">
             <h3>Agregar tienda</h3>
             <form id="f-tienda" class="grid">
-              <div class="field"><label for="ti-nombre">Tienda</label><input type="text" id="ti-nombre" required placeholder="Marathon Quicentro"></div>
+              <div class="field"><label for="ti-nombre">Tienda</label><input type="text" id="ti-nombre" required placeholder="Nombre de la tienda"></div>
               <div class="field"><label for="ti-ciudad">Ciudad</label><input type="text" id="ti-ciudad" required placeholder="Quito"></div>
               <div class="field" id="ti-pais-f"><label for="ti-pais">Empresa y país</label><select id="ti-pais"></select></div>
-              <div class="field"><label for="ti-email">Correo de la tienda</label><input type="email" id="ti-email" placeholder="quicentro@marathon.com"></div>
+              <div class="field"><label for="ti-email">Correo de la tienda</label><input type="email" id="ti-email" placeholder="tienda@empresa.com"></div>
               <div class="span"><button class="btn" type="submit">Agregar tienda</button></div>
             </form>
           </div>
           <div class="card">
             <h3>Pegar varias desde Excel</h3>
-            <p class="hint" style="margin:-4px 0 10px">Una por línea, en este orden: <span class="mono">Tienda; Ciudad; Empresa (Marathon o Equinox; en vista regional agrega el país, ej. Equinox PE); Correo</span></p>
-            <textarea id="bulk" placeholder="Marathon Quicentro; Quito; Marathon; quicentro@marathon.com"></textarea>
+            <p class="hint" style="margin:-4px 0 10px">Una por línea, en este orden: <span class="mono">Tienda; Ciudad; País (solo en vista regional: EC, PE, CL o BO); Correo</span></p>
+            <textarea id="bulk" placeholder="Tienda Quicentro; Quito; EC; quicentro@empresa.com"></textarea>
             <div class="row" style="margin-top:10px"><button class="btn" id="bulk-go">Importar tiendas</button></div>
           </div>
           <div id="tiendas-list"></div>
@@ -159,7 +159,7 @@
           <div class="card">
             <h3>Cargar lista</h3>
             <p class="hint" style="margin:-4px 0 10px">Una persona por línea: <span class="mono">Nombre; correo; área</span>. Al guardar se reemplaza la lista completa.</p>
-            <textarea id="roster" placeholder="María López; maria.lopez@marathon.com; Finanzas"></textarea>
+            <textarea id="roster" placeholder="María López; maria.lopez@empresa.com; Finanzas"></textarea>
             <div class="row" style="margin-top:10px"><button class="btn" id="roster-go">Guardar lista</button><button class="btn ghost" id="remind" hidden>Copiar recordatorio para pendientes</button></div>
           </div>
           <div id="personal-list"></div>
@@ -182,7 +182,7 @@
 
         <!-- Temporada -->
         <div class="pane" data-pane="acceso" hidden>
-          <div class="pane-h"><h2>Acceso</h2><p>PIN de cada país y quién está dentro del panel. Cada PIN da acceso a Marathon y Equinox de ese país. Solo RRHH regional ve esta sección.</p></div>
+          <div class="pane-h"><h2>Acceso</h2><p>PIN de cada país y quién está dentro del panel. Solo RRHH regional ve esta sección.</p></div>
           <div class="card">
             <h3>PIN por país</h3>
             <p class="hint" style="margin:-4px 0 12px">Quien escribe un PIN queda como RRHH de ese país por 12 horas. Al cambiar un PIN, se cierran los accesos abiertos con el PIN anterior.</p>
@@ -194,8 +194,8 @@
           </div>
           <div class="card">
             <h3>Correos que pueden entrar</h3>
-            <p class="hint" style="margin:-4px 0 12px">Si agregas dominios, solo entran correos de esos dominios. Sin dominios, entra cualquier correo.</p>
-            <form id="f-dominio" class="row" style="margin-bottom:12px"><input type="text" id="do-dominio" placeholder="marathon.com.ec" aria-label="Dominio" style="max-width:260px"><button class="btn small" type="submit">Permitir dominio</button></form>
+            <p class="hint" style="margin:-4px 0 12px">Solo entran correos de estos dominios (más RRHH regional). Agrega el dominio de la empresa, por ejemplo el de los correos corporativos.</p>
+            <form id="f-dominio" class="row" style="margin-bottom:12px"><input type="text" id="do-dominio" placeholder="empresa.com.ec" aria-label="Dominio" style="max-width:260px"><button class="btn small" type="submit">Permitir dominio</button></form>
             <div class="row" id="dominios-list"></div>
           </div>
         </div>
@@ -208,7 +208,7 @@
               <div class="field"><label for="te-max">Máximo de turnos por persona</label><input type="number" id="te-max" min="1" max="50" placeholder="Sin límite"></div>
               <div class="field"><label for="te-abiertas">Reservas</label><select id="te-abiertas"><option value="1">Abiertas</option><option value="0">Cerradas</option></select></div>
               <div class="field"><label for="te-limite">Fecha límite para elegir</label><input type="date" id="te-limite"></div>
-              <div class="field span"><label for="te-msg">Mensaje para el equipo</label><input type="text" id="te-msg" placeholder="Ve con uniforme Marathon y preséntate en caja al llegar."></div>
+              <div class="field span"><label for="te-msg">Mensaje para el equipo</label><input type="text" id="te-msg" placeholder="Ve con uniforme y preséntate en caja al llegar."></div>
               <div class="field span"><label for="te-firma">Firma de los correos</label><input type="text" id="te-firma" placeholder="Talento, Clima y Cultura"></div>
               <div class="span"><button class="btn" type="submit">Guardar temporada</button></div>
             </form>

@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx';
 // ---- Empresa de este despliegue (un proyecto de Vercel por empresa) ----
 const MARCA=String(import.meta.env.VITE_MARCA||'marathon').toLowerCase()==='equinox'?'equinox':'marathon';
 const SCHEMA=import.meta.env.VITE_SCHEMA||(MARCA==='equinox'?'ptg_eqx':'ptg');
-const BRAND={marathon:{nombre:'Marathon',ejemploTienda:'Marathon Quicentro',fondo:'#0a0f1e',acento:'#1B4B8A'},
+const BRAND={marathon:{nombre:'Marathon',ejemploTienda:'Marathon Quicentro',fondo:'#0a0f1e',acento:'#1B4B8A',copia:'capacitacion@ec.aseyco.com'},
              equinox:{nombre:'Equinox',ejemploTienda:'Equinox CCI',fondo:'#0b0b0b',acento:'#F26522'}}[MARCA];
 document.documentElement.dataset.marca=MARCA;document.title=`Play the Game · ${BRAND.nombre}`;
 {const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=BRAND.fondo;
@@ -94,20 +94,21 @@ function offset(fecha,hora,pais){
 }
 function calData(t){
   const ti=tiendaMap()[t.tiendaId];if(!ti)return null;const c=S.cfg||{};
-  return{ti,subject:`Play the Game – Apoyo en ${ti.nombre}`,location:`${ti.nombre}, ${ti.ciudad}`,
+  const inv=[ti.email,BRAND.copia].filter(Boolean).join(',');
+  return{ti,inv,subject:`Play the Game – Apoyo en ${ti.nombre}`,location:`${ti.nombre}, ${ti.ciudad}`,
     body:`Turno de Play the Game en ${ti.nombre} (${ti.ciudad}), ${fmtF(t.fecha)} de ${t.inicio} a ${t.fin}.${c.mensaje?'\n'+c.mensaje:''}\n\nReservado en Play the Game – Talento, Clima y Cultura.`};
 }
 function outlookUrl(t){
   const c=calData(t);if(!c)return'#';
   const p={path:'/calendar/action/compose',rru:'addevent',subject:c.subject,body:c.body,location:c.location,
     startdt:`${t.fecha}T${t.inicio}:00${offset(t.fecha,t.inicio,c.ti.pais)}`,enddt:`${t.fecha}T${t.fin}:00${offset(t.fecha,t.fin,c.ti.pais)}`};
-  if(c.ti.email)p.to=c.ti.email;
+  if(c.inv)p.to=c.inv;
   return 'https://outlook.office.com/calendar/0/deeplink/compose?'+new URLSearchParams(p).toString();
 }
 function googleUrl(t){
   const c=calData(t);if(!c)return'#';const f=t.fecha.replace(/-/g,''),hh=x=>x.replace(':','')+'00';
   const p={action:'TEMPLATE',text:c.subject,dates:`${f}T${hh(t.inicio)}/${f}T${hh(t.fin)}`,ctz:TZ[c.ti.pais]||TZ.EC,details:c.body,location:c.location};
-  if(c.ti.email)p.add=c.ti.email;
+  if(c.inv)p.add=c.inv;
   return 'https://calendar.google.com/calendar/render?'+new URLSearchParams(p).toString();
 }
 const calButtons=t=>`<a class="btn small" target="_blank" rel="noopener" href="${esc(outlookUrl(t))}">Agregar en Outlook</a><a class="btn ghost small" target="_blank" rel="noopener" href="${esc(googleUrl(t))}">Google Calendar</a>`;

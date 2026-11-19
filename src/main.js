@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx';
 const MARCA=String(import.meta.env.VITE_MARCA||'marathon').toLowerCase()==='equinox'?'equinox':'marathon';
 const SCHEMA=import.meta.env.VITE_SCHEMA||(MARCA==='equinox'?'ptg_eqx':'ptg');
 const BRAND={marathon:{nombre:'Marathon',ejemploTienda:'Marathon Quicentro',fondo:'#0a0f1e',acento:'#1B4B8A',copia:'capacitacion@ec.aseyco.com'},
-             equinox:{nombre:'Equinox',ejemploTienda:'Equinox CCI',fondo:'#0b0b0b',acento:'#F26522',copia:'capacitacion@ec.aseyco.com'}}[MARCA];
+             equinox:{nombre:'Equinox',ejemploTienda:'Equinox CCI',fondo:'#0b0b0b',acento:'#F26522'}}[MARCA];
 document.documentElement.dataset.marca=MARCA;document.title=`Play the Game · ${BRAND.nombre}`;
 {const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=BRAND.fondo;
  const ic=document.querySelector('link[rel="icon"]');if(ic)ic.href=`data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='${BRAND.acento}'/><path d='M12 9l11 7-11 7z' fill='#fff'/></svg>`)}`;
@@ -122,7 +122,7 @@ function paint(){
   $('#season').innerHTML=`<b>${esc(c.nombre||'Turnos de apoyo en tienda')}</b>${(c.mensaje||lim)?`<span>${esc((c.mensaje||'')+lim)}</span>`:''}`;
   const st=$('#status');st.classList.toggle('off',!abiertas());st.querySelector('span').textContent=abiertas()?'Reservas abiertas':'Reservas cerradas';
   const pc=$('#pais-chip');pc.hidden=!S.unidad;if(S.unidad)pc.innerHTML=`${esc(uName(S.unidad))} <span style="color:var(--muted)">· Cambiar</span>`;
-  $('#tab-admin').hidden=!(S.admin||S.wantAdmin);const rb=$('#rrhh-btn');if(rb)rb.hidden=S.admin||!S.started;
+  $('#tab-admin').hidden=!(S.admin||S.wantAdmin);const rb=$('#rrhh-btn');if(rb)rb.hidden=S.admin||!S.started;const ro=$('#rrhh-out');if(ro)ro.hidden=!(S.admin||S.wantAdmin);
   $('#n-mios').textContent=misRes().filter(r=>r.fecha>=hoy()).length;
   renderGates();fillFilters();renderSteps();renderBooked();renderCal();renderDay();renderMios();
   if(S.admin||S.wantAdmin){renderAdminGate();if(S.adminPais&&S.admin){
@@ -602,6 +602,10 @@ document.addEventListener('click',async e=>{
   if(e.target.closest('#pais-chip')){S.unidad=null;showTab('reservar');paint();return}
   const pb=e.target.closest('[data-pais]');if(pb){S.unidad=S.perfil.unidad=pb.dataset.pais;savePerfil(true);S.selDay=null;S.calY=null;$('#f-ciudad').value='';paint();return}
   const ab=e.target.closest('[data-apais]');if(ab){const p=ab.dataset.apais;if(S.owner||S.grants.includes(p))unlock(p);else{S.pinFor=p;renderAdminGate()}return}
+  if(e.target.closest('#rrhh-out')){const ps=[...S.grants,...(S.owner?['*']:[])];
+    try{for(const p of ps)await q(sb.rpc('salir_rrhh',{p_pais:p}))}catch(err){toast(errMsg(err))}
+    S.adminPais=null;S.pinFor=null;S.wantAdmin=false;S.tabTouched=true;ss.set('ptg-admin',null);await loadRole();
+    paint();showTab('reservar');toast(S.admin?'Este acceso de RRHH es permanente y no se puede cerrar desde aquí.':'Saliste del panel de RRHH.');return}
   if(e.target.closest('#rrhh-btn')){S.wantAdmin=true;S.tabTouched=true;paint();showTab('admin');return}
   const b=e.target.closest('[data-act]');if(!b)return;const id=b.dataset.id,act=b.dataset.act;
   if(act==='logout'){await sb.auth.signOut();location.reload();return}
@@ -751,7 +755,7 @@ async function start(session){
     const pf=await q(sb.from('perfiles').select('nombre,area,unidad,email').eq('user_id',S.uid).maybeSingle());
     S.perfil={nombre:pf?.nombre||'',area:pf?.area||'',email:pf?.email||'',unidad:pf?.unidad||null};S.unidad=S.perfil.unidad;
     $('#nombre').value=S.perfil.nombre;$('#area').value=S.perfil.area;$('#correo').value=S.perfil.email;
-    $('#me').innerHTML=`<div style="text-align:right"><div class="n"></div><div class="row" style="gap:4px;justify-content:flex-end;margin-top:4px"><button class="btn ghost tiny" id="rrhh-btn" hidden>Acceso RRHH</button></div></div>`;$('#me .n').textContent=S.perfil.nombre||'';
+    $('#me').innerHTML=`<div style="text-align:right"><div class="n"></div><div class="row" style="gap:4px;justify-content:flex-end;margin-top:4px"><button class="btn ghost tiny" id="rrhh-btn" hidden>Acceso RRHH</button><button class="btn ghost tiny" id="rrhh-out" hidden>Salir de RRHH</button></div></div>`;$('#me .n').textContent=S.perfil.nombre||'';
     await reload('unidades');if(S.unidad&&!U[S.unidad])S.unidad=S.perfil.unidad=null;
     await Promise.all(['tiendas','turnos','reservas','config','avisos','convocados','admins'].map(reload));
     S.ready=true;

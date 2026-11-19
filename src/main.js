@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx';
 const MARCA=String(import.meta.env.VITE_MARCA||'marathon').toLowerCase()==='equinox'?'equinox':'marathon';
 const SCHEMA=import.meta.env.VITE_SCHEMA||(MARCA==='equinox'?'ptg_eqx':'ptg');
 const BRAND={marathon:{nombre:'Marathon',ejemploTienda:'Marathon Quicentro',fondo:'#0a0f1e',acento:'#1B4B8A',copia:'capacitacion@ec.aseyco.com'},
-             equinox:{nombre:'Equinox',ejemploTienda:'Equinox CCI',fondo:'#0b0b0b',acento:'#F26522'}}[MARCA];
+             equinox:{nombre:'Equinox',ejemploTienda:'Equinox CCI',fondo:'#0b0b0b',acento:'#F26522',copia:'capacitacion@ec.aseyco.com'}}[MARCA];
 document.documentElement.dataset.marca=MARCA;document.title=`Play the Game · ${BRAND.nombre}`;
 {const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=BRAND.fondo;
  const ic=document.querySelector('link[rel="icon"]');if(ic)ic.href=`data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='${BRAND.acento}'/><path d='M12 9l11 7-11 7z' fill='#fff'/></svg>`)}`;
